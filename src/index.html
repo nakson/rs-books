@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css"
+    />
+    <link rel="stylesheet" href="./data/assets/style.css" />
+    <title>Alimama</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/element-ui/lib/theme-chalk/index.css"
+    />
+    <style>
+      body {
+        margin: 0;
+        font-family: Helvetica, sans-serif;
+        font-size: 0.9rem;
+      }
+      .el-input {
+        width: 70%;
+      }
+      .el-tabs__item.is-active {
+        font-weight: bold;
+      }
+      .el-tabs__nav-scroll {
+        padding-left: 20px;
+      }
+    </style>
+    <script src="./data/assets/lodash.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.11/lodash.min.js"></script>
+  </head>
+  <div id="app">
+    <el-menu
+      mode="horizontal"
+      default-active="1"
+      background-color="#545c64"
+      text-color="#fff"
+      active-text-color="#ffd04b"
+    >
+      <el-menu-item index="1"
+        ><i class="fa fa-fw fa-book-open-reader"></i>&nbsp;&nbsp;Book
+        Recommender System</el-menu-item
+      >
+    </el-menu>
+
+    <el-tabs v-model="activeName" @tab-click="handleClick">
+      <!-- Algorthem 1 Recommendations -->
+      <el-tab-pane label="Recommendation Method 1" name="algo1">
+        <h3 style="padding-left: 10px; margin-bottom: 0">
+          🔖 Welcome {{this.form.name}} !
+        </h3>
+        <el-container>
+          <el-main>
+            <h2>See What Everyone is Reading at Your Age</h2>
+            <span style="font-size: 0.8rem; color: #545c65"
+              >Age Group: {{form.age}}</span
+            ><br />
+            <el-row :gutter="20">
+              <el-col :span="4" v-for="o in books" :key="o.iid" :offset="0">
+                <el-card
+                  :body-style="{ padding: '0px' }"
+                  style="
+                    margin-top: 15px;
+                    height: 400px;
+                    overflow: auto;
+                    position: relative;
+                  "
+                >
+                  <el-image
+                    style="width: 100%; display: block; height: 12rem"
+                    :src="o.image"
+                    fit="cover"
+                  ></el-image>
+                  <div style="padding: 14px">
+                    <h5 style="margin: 0">{{ o.title }}</h5>
+                    <div class="bottom clearfix">
+                      <span style="font-size: 0.8rem">{{ o.year }}</span>
+                      <br />
+                      <span style="font-size: 0.8rem">{{ o.author }}</span>
+                    </div>
+                  </div>
+                  <el-button
+                    type="warning"
+                    plain
+                    style="position: absolute; bottom: 10px; right: 10px"
+                    @click="liked_btn(o)"
+                  >
+                    <i class="fa fa-fw fa-heart"></i> Like
+                  </el-button>
+                </el-card>
+              </el-col>
+            </el-row>
+
+            <el-divider><i class="el-icon-star-on"></i></el-divider>
+            <h3>
+              You Might Also Like These Books
+              <h5 v-if="like_reco_show[0]" style="color: #464a4f">
+                You liked "{{this.like_reco_show[0].title}}"
+                <br style="padding: 10px" />
+                Recommended based on the most similar books
+              </h5>
+              <!-- <h5>like_reco_show: {{this.like_reco_show}}</h5> -->
+              <!-- <h5>liked: {{this.liked.length}}</h5> -->
+              <el-divider
+                content-position="right"
+                style="position: absolute; right: 0px; width: 50%"
+                ><el-link
+                  icon="el-icon-refresh-right"
+                  @click="refresh_like_btn()"
+                  type="warning"
+                  >Refresh</el-link
+                ></el-divider
+              >
+            </h3>
+
+            <el-row :gutter="20">
+              <el-col
+                :span="4"
+                v-for="(o, index) in like_reco_show"
+                :key="o.iid"
+                :offset="0"
+              >
+                <el-card
+                  :body-style="{ padding: '0px' }"
+                  style="
+                    margin-top: 15px;
+                    height: 400px;
+                    overflow: auto;
+                    position: relative;
+                  "
+                >
+                  <el-image
+                    style="width: 100%; display: block; height: 12rem"
+                    :src="o.image"
+                    fit="cover"
+                  ></el-image>
+                  <div style="padding: 14px">
+                    <h5 style="margin: 0">{{ o.title }}</h5>
+                    <div class="bottom clearfix">
+                      <span style="font-size: 0.8rem">{{ o.year }}</span>
+                      <br />
+                      <span style="font-size: 0.8rem">{{ o.author }}</span>
+                    </div>
+                  </div>
+
+                  <div
+                    v-show="index != 0"
+                    style="position: absolute; bottom: 10px; right: 10px"
+                  >
+                    <el-button
+                      @click="o.like_eval = 1"
+                      type="success"
+                      size="mini"
+                      circle
+                      ><i class="fa fa-fw fa-thumbs-up"></i
+                    ></el-button>
+                    <el-button
+                      @click="o.like_eval = -1"
+                      type="danger"
+                      size="mini"
+                      circle
+                      ><i class="fa fa-fw fa-thumbs-down"></i
+                    ></el-button>
+                  </div>
+                </el-card>
+              </el-col>
+            </el-row>
+
+            <el-row type="flex" class="row-bg" justify="end">
+              <el-col
+                :align="middle"
+                :span="12"
+                v-show="this.like_rec_acc > 0"
+                style="margin-top: 40px"
+                >The accuracy of this recommendation (RMSE):
+                {{this.like_rec_acc/4}}</el-col
+              >
+              <el-col :span="6">
+                <el-button
+                  type="warning"
+                  icon="el-icon-edit"
+                  @click="like_eval_btn"
+                  :disabled="submit_like_show"
+                  plain
+                  style="
+                    width: 200px;
+                    float: right;
+                    margin: 30px 30px 10px 30px;
+                    display: block;
+                  "
+                  >Submit Your Evaluation</el-button
+                >
+              </el-col>
+            </el-row>
+
+            <el-alert
+              v-show="this.like_rec_acc > 0"
+              title="The above book list has been refreshed."
+              type="info"
+              show-icon
+              center
+            >
+            </el-alert>
+          </el-main>
+        </el-container>
+      </el-tab-pane>
+
+      <!-- Algorthem 2 Recommendations -->
+      <el-tab-pane label="Recommendation Method 2" name="algo2">
+        <h3 style="padding-left: 10px; margin-bottom: 0">
+          🔖 Welcome {{this.form.name}} !
+        </h3>
+        <el-container>
+          <el-main>
+            <h2>Please Rate the Books You Have Read</h2>
+            <span style="font-size: 0.8rem; color: #545c65"
+              >These books have been read and rated by readers aged:
+              {{form.age}}</span
+            ><br />
+            <el-row :gutter="20">
+              <el-col :span="4" v-for="o in books" :key="o.iid" :offset="0">
+                <el-card
+                  :body-style="{ padding: '0px' }"
+                  style="
+                    margin-top: 15px;
+                    height: 400px;
+                    overflow: auto;
+                    position: relative;
+                  "
+                >
+                  <el-image
+                    style="width: 100%; display: block; height: 12rem"
+                    :src="o.image"
+                    fit="cover"
+                  ></el-image>
+                  <div style="padding: 14px">
+                    <h5 style="margin: 0">{{ o.title }}</h5>
+                    <div class="bottom clearfix">
+                      <span style="font-size: 0.8rem">{{ o.year }}</span>
+                      <br />
+                      <span style="font-size: 0.8rem">{{ o.author }}</span>
+                    </div>
+                  </div>
+                  <el-rate
+                    v-model="o.score"
+                    :texts="['oops', 'normal', 'good', 'great', 'excellent']"
+                    show-text
+                    style="padding: 10px 10px"
+                  >
+                  </el-rate>
+                </el-card>
+              </el-col>
+              <el-col style="margin: 30px">
+                <el-button
+                  type="success"
+                  @click="rated_btn"
+                  :disabled="step2_show"
+                  plain
+                  style="width: 200px; margin: 0 auto; display: block"
+                  >Get Recommendations</el-button
+                >
+              </el-col>
+            </el-row>
+
+            <el-divider><i class="el-icon-star-on"></i></el-divider>
+
+            <h3>
+              Recommended According to Your Taste
+              <h5 v-if="rate_reco_show[0]" style="color: #464a4f">
+                Recommended based on the the similar users
+              </h5>
+              <el-divider
+                content-position="right"
+                style="position: absolute; right: 0px; width: 50%"
+                ><el-link
+                  icon="el-icon-refresh-right"
+                  @click="refresh_rate_btn()"
+                  type="success"
+                  >Refresh</el-link
+                ></el-divider
+              >
+            </h3>
+            <!-- <h5>rate_reco_show: {{rate_reco_show}}</h5> -->
+            <!-- <h5>this.rate_recommended: {{this.rate_recommended.length}}</h5> -->
+
+            <el-row :gutter="20">
+              <el-col
+                :span="4"
+                v-for="o in rate_reco_show"
+                :key="o.iid"
+                :offset="0"
+              >
+                <el-card
+                  :body-style="{ padding: '0px' }"
+                  style="
+                    margin-top: 15px;
+                    height: 400px;
+                    overflow: auto;
+                    position: relative;
+                  "
+                >
+                  <el-image
+                    style="width: 100%; display: block; height: 12rem"
+                    :src="o.image"
+                    fit="cover"
+                  ></el-image>
+                  <div style="padding: 14px">
+                    <h5 style="margin: 0">{{ o.title }}</h5>
+                    <div class="bottom clearfix">
+                      <span style="font-size: 0.8rem">{{ o.year }}</span>
+                      <br />
+                      <span style="font-size: 0.8rem">{{ o.author }}</span>
+                    </div>
+                  </div>
+                  <el-rate
+                    v-model="o.rate_eval"
+                    :icon-classes="iconClasses"
+                    void-icon-class="icon-rate-face-off"
+                    :colors="['#99A9BF', '#F7BA2A', '#FF9900']"
+                    :texts="['bad', 'not interested', 'ok', 'happy', 'fantastic']"
+                    show-text
+                    style="padding: 10px 10px"
+                  >
+                  </el-rate>
+                </el-card>
+              </el-col>
+            </el-row>
+
+            <el-row type="flex" class="row-bg" justify="end">
+              <el-col
+                :align="middle"
+                :span="12"
+                v-show="this.rate_rec_acc > 0"
+                style="margin-top: 40px"
+                >The accuracy of this recommendation (RMSE):
+                {{this.rate_rec_acc/3}}</el-col
+              >
+              <el-col :span="6">
+                <el-button
+                  type="success"
+                  icon="el-icon-edit"
+                  @click="rate_eval_btn"
+                  :disabled="submit_rate_show"
+                  plain
+                  style="
+                    width: 200px;
+                    float: right;
+                    margin: 30px;
+                    display: block;
+                  "
+                  >Submit Your Evaluation</el-button
+                >
+              </el-col>
+            </el-row>
+
+            <el-alert
+              v-show="this.rate_rec_acc > 0"
+              title="The above book list has been refreshed."
+              type="info"
+              show-icon
+              center
+            >
+            </el-alert>
+          </el-main>
+        </el-container>
+      </el-tab-pane>
+    </el-tabs>
+
+    <el-container>
+      <!-- pop-up window to selcte age -->
+      <el-dialog
+        title="Please choose your age. ^_^"
+        :visible="dialog0"
+        :show-close="false"
+      >
+        <el-form :model="form">
+          <el-form-item label="Your Name" :label-width="formLabelWidth">
+            <el-input v-model="form.name" autocomplete="off"></el-input>
+          </el-form-item>
+          <el-form-item label="Age" :label-width="formLabelWidth">
+            <el-select
+              v-model="form.age"
+              placeholder="Please select an age zone"
+              style="width: 100%"
+            >
+              <el-option label="&lt 18" value="0-18"></el-option>
+              <el-option label="18-30" value="18-30"></el-option>
+              <el-option label="30-40" value="30-40"></el-option>
+              <el-option label="40-50" value="40-50"></el-option>
+              <el-option label="&gt 50" value="50-100"></el-option>
+            </el-select>
+          </el-form-item>
+        </el-form>
+        <span slot="footer" class="dialog-footer">
+          <el-button @click="dialog0 = false">Cancel</el-button>
+          <el-button type="primary" @click="step1" plain :disabled="step1_show"
+            >Confirm</el-button
+          >
+        </span>
+      </el-dialog>
+    </el-container>
+  </div>
+  <body>
+    <!-- import Vue before Element -->
+    <script src="https://unpkg.com/vue@2.6.14/dist/vue.js"></script>
+    <!-- import JavaScript -->
+    <script src="https://unpkg.com/element-ui/lib/index.js"></script>
+    <script src="https://unpkg.com/element-ui/lib/umd/locale/en.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <!-- <script src="data/assets/canvas-nest.js"></script> -->
+    <script src="https://cdn.jsdelivr.net/npm/bubbly-bg@1.0.0/dist/bubbly-bg.js"></script>
+    <script>
+      bubbly({
+        colorStart: "#fff4e6",
+        colorStop: "#ffe9e4",
+        blur: 1,
+        compose: "source-over",
+        bubbleFunc: () => `hsla(${Math.random() * 50},100%,50%,3)`,
+      });
+    </script>
+    <script>
+      ELEMENT.locale(ELEMENT.lang.en);
+      new Vue({
+        el: "#app",
+        data: function () {
+          return {
+            baseurl: "http://127.0.0.1:8000",
+            form: {
+              name: "",
+              age: "",
+            },
+            books: [],
+            liked: [],
+            recommended: [],
+            rate_recommended: [],
+            like_reco_show: [],
+            rate_reco_show: [],
+            iconClasses: [
+              "icon-rate-face-1",
+              "icon-rate-face-2",
+              "icon-rate-face-3",
+            ],
+            like_rec_acc: -1,
+            rate_rec_acc: -1,
+            //selected_genre: { a: "Action" },
+            genre: [],
+            movies: [],
+            dialog0: true,
+            dialog1: false,
+            checkboxGroup1: [],
+            value: 2,
+            formLabelWidth: "120px",
+          };
+        },
+        methods: {
+          step1: function () {
+            axios.post(this.baseurl + "/api/books", this.form).then((res) => {
+              this.books = _.values(JSON.parse(res.data));
+              console.log(this.books[2].title); // get books info
+              if (this.books.length > 12) {
+                this.dialog0 = false;
+                //this.dialog1 = true;
+              } else {
+                this.$message({
+                  showClose: true,
+                  message: "Error",
+                });
+              }
+            });
+          },
+          rated_btn: function () {
+            axios
+              .post(this.baseurl + "/api/rate_recommend", this.books)
+              .then((res) => {
+                console.log("===========rate_recom res.data: " + res.data);
+                this.rate_recommended.push.apply(
+                  this.rate_recommended,
+                  res.data
+                );
+                this.rate_reco_show = this.sampleRateRec(this.rate_recommended);
+              });
+          },
+          liked_btn: function (book) {
+            let that = this;
+            this.liked.push(book);
+            this.recommended.splice(
+              this.recommended.findIndex((item) => item.iid === book.iid),
+              1
+            );
+            axios
+              .get(this.baseurl + "/api/like_recommend/" + book.iid)
+              .then((res) => {
+                //console.log("-==============like_recom res.data" + res.data);
+                //rec_like_books = _.values(JSON.parse(res.data));
+                that.recommended.push.apply(that.recommended, res.data);
+                that.liked.push.apply(that.liked, res.data);
+                this.like_reco_show = that.liked.slice(-6);
+              });
+          },
+          refresh_like_btn: function () {
+            this.like_reco_show = this.sampleSize(this.liked);
+          },
+          refresh_rate_btn: function () {
+            this.rate_reco_show = this.sampleRateRec(this.rate_recommended);
+          },
+          sampleSize: function ([...arr]) {
+            let m = arr.length / 6;
+            let start = Math.floor(Math.random() * m);
+            return arr.slice(start * 6, start * 6 + 6);
+          },
+          sampleRateRec: function ([...arr]) {
+            let m = arr.length;
+            while (m) {
+              const i = Math.floor(Math.random() * m--);
+              [arr[m], arr[i]] = [arr[i], arr[m]];
+            }
+            return arr.slice(0, 6);
+          },
+          like_eval_btn: function () {
+            axios
+              .post(
+                this.baseurl + "/api/like_eval",
+                this.like_reco_show.slice(-5)
+              )
+              .then((res) => {
+                console.log("--------------------res.data: " + res.data);
+                this.like_rec_acc = res.data;
+
+                let curr_show = this.like_reco_show;
+                for (let i = 0; i < curr_show.length; i++) {
+                  if (curr_show[i].like_eval > 0) {
+                    // add recommend for liked feedbacks
+                    axios
+                      .get(
+                        this.baseurl + "/api/like_recommend/" + curr_show[i].iid
+                      )
+                      .then((res) => {
+                        //curr_show[i].like_eval = null;
+                        this.liked.push(curr_show[i]);
+                        this.liked.push.apply(this.liked, res.data);
+                      });
+                  }
+                }
+
+                // refresh the books
+                axios
+                  .post(this.baseurl + "/api/books", this.form)
+                  .then((newB) => {
+                    this.books = _.values(JSON.parse(newB.data));
+                    this.like_reco_show = this.liked.slice(-6);
+                  });
+              });
+          },
+          rate_eval_btn: function () {
+            let curr_show = this.rate_reco_show;
+            for (let i = 0; i < curr_show.length; i++) {
+              if (curr_show[i].rate_eval < 3) {
+                //remove the books that user donot like in the feedback
+                let removeUnlike = _.remove(
+                  this.rate_recommended,
+                  function (b) {
+                    return b.iid == curr_show[i].iid;
+                  }
+                );
+              }
+            }
+            axios
+              .post(this.baseurl + "/api/rate_eval", this.rate_reco_show)
+              .then((res) => {
+                console.log("-======rate_eval_btn res.data: " + res.data);
+                this.rate_rec_acc = res.data;
+
+                // do the recommend aging with feeback
+                axios
+                  .post(
+                    this.baseurl + "/api/rate_recommend",
+                    this.rate_reco_show
+                  )
+                  .then((res) => {
+                    console.log("===========rate_recom res.data: " + res.data);
+                    this.rate_recommended.push.apply(
+                      this.rate_recommended,
+                      res.data
+                    );
+                  });
+
+                //refresh the recommondation
+                this.rate_reco_show = this.sampleRateRec(this.rate_recommended);
+                axios
+                  .post(this.baseurl + "/api/books", this.form)
+                  .then((newB) => {
+                    // refreshing the age group books
+                    this.books = _.values(JSON.parse(newB.data));
+                  });
+              });
+          },
+        },
+        mounted: function () {
+          axios.get(this.baseurl + "/api/genre").then((res) => {
+            this.genre = res.data["genre"];
+          });
+        },
+        computed: {
+          step1_show: function () {
+            if (this.form.age != "" && this.form.name != "") {
+              return false;
+            } else {
+              return true;
+            }
+          },
+          step2_show: function () {
+            let scores = 0;
+            for (let i of this.books) {
+              if (i.score > 0) {
+                scores++;
+              }
+            }
+            if (scores >= 1) {
+              return false;
+            } else {
+              return true;
+            }
+          },
+          submit_like_show: function () {
+            let scores = 0;
+            for (let i of this.like_reco_show) {
+              if (i.like_eval != 0 && i.like_eval != null) {
+                scores++;
+              }
+            }
+            if (scores >= 1) {
+              return false;
+            } else {
+              return true;
+            }
+          },
+          submit_rate_show: function () {
+            let scores = 0;
+            for (let i of this.rate_reco_show) {
+              if (i.rate_eval > 0) {
+                scores++;
+              }
+            }
+            if (scores >= 1) {
+              return false;
+            } else {
+              return true;
+            }
+          },
+        },
+      });
+    </script>
+  </body>
+</html>
